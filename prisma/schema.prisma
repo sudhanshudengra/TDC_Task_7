@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model agent {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  mobile    String    @db.VarChar(255)
+  pass_id   Int
+  flight_id Int
+  passenger passenger @relation(fields: [pass_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  booking   booking[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model agent_passenger {
+  agent_id     Int
+  passenger_id Int
+  passenger    passenger @relation(fields: [passenger_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model aiports_airlines {
+  airport_id  Int
+  airlines_id Int
+  airlines    airlines @relation(fields: [airlines_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  airports    airports @relation(fields: [airport_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@ignore
+}
+
+model airlines {
+  id               Int                @id @default(autoincrement())
+  airline_name     String             @db.VarChar(255)
+  owner_id         Int
+  description      String
+  aiports_airlines aiports_airlines[] @ignore
+  flight_airlines  flight_airlines[] @ignore
+}
+
+model airports {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  owner            String             @db.VarChar(255)
+  country          Int
+  terminals        Int
+  aiports_airlines aiports_airlines[] @ignore
+}
+
+model booking {
+  id         Int       @id @default(autoincrement())
+  mode       String
+  pass_id    Int
+  flight_id  Int
+  billing_id Int
+  ticket_no  Int
+  agent_id   Int
+  seat_type  Boolean
+  agent      agent     @relation(fields: [agent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  flight     flight    @relation(fields: [flight_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  passenger  passenger @relation(fields: [pass_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model flight {
+  id               Int               @id @default(autoincrement())
+  name             String            @db.VarChar(255)
+  model_no         Int
+  s_loc_id         Int
+  d_loc_id         Int
+  description      String?
+  status           String?           @db.VarChar(255)
+  business_seats   Int?
+  economy_seats    Int?
+  no_of_attendants Int?
+  duration         DateTime          @default(now())
+  booking          booking[]
+  flight_airlines  flight_airlines[] @ignore
+  ticket           ticket[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model flight_airlines {
+  flight_id   Int
+  airlines_id Int
+  airlines    airlines @relation(fields: [airlines_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  flight      flight   @relation(fields: [flight_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@ignore
+}
+
+model passenger {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  email             String
+  dob               DateTime?           @db.Date
+  gender            String              @db.VarChar(255)
+  agent             agent[]
+  agent_passenger   agent_passenger[] @ignore
+  booking           booking[]
+  passenger_address passenger_address[]
+  passenger_mobile  passenger_mobile[]
+  payment           payment[]
+}
+
+model passenger_address {
+  id        Int       @id
+  address   Int
+  city      Int
+  pincode   Int
+  country   Int
+  pass_id   Int
+  passenger passenger @relation(fields: [pass_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model passenger_mobile {
+  id           Int       @id
+  mobile       Int
+  passenger_id Int
+  passenger    passenger @relation(fields: [passenger_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model payment {
+  id           BigInt    @id @default(autoincrement())
+  passenger_id Int
+  base_fare    Int
+  tax          Int
+  ticket_id    Int
+  date         DateTime  @db.Timestamptz(6)
+  mode         String
+  status       Boolean
+  passenger    passenger @relation(fields: [passenger_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ticket       ticket[]
+}
+
+model ticket {
+  id            Int     @id @default(autoincrement())
+  to_location   String
+  from_location String
+  terminal_no   Int?
+  fare_price    Int
+  payment_id    BigInt
+  flight_id     Int
+  seat_type     Boolean
+  flight        flight  @relation(fields: [flight_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payment       payment @relation(fields: [payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
